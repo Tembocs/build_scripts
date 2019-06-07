@@ -6,12 +6,16 @@ Param([string]$clean="true")
 # This will be used to reset the working directory after building.
 $original_dir = Get-Location
 
+# TODO How to specify project file on Windows since cmake --build does not seem
+# TODO to work.
 function call-cmake() {
     "--> Calling CMake ...`n"
     if ($isLinux) {
         cmake -G "Unix Makefiles" ..
+        cmake --build .
     } else {
-        cmake -G "Visual Studio 16 2019" -A x64
+        cmake -G "Visual Studio 16 2019" -A x64 ..
+        MSBuild.exe learn.vcxproj
     }
 }
 
@@ -34,7 +38,6 @@ if (!(Test-Path ./build)) {
 
     Set-Location ./build
     call-cmake
-    cmake --build .
 
 } elseif ((Test-Path ./build) -And ($clean -eq "true")) {
     "--> Cleaning build directory ..."
@@ -45,19 +48,27 @@ if (!(Test-Path ./build)) {
 
     Set-Location ./build
     call-cmake
-    cmake --build .
 
 } else {
     # We have previous build directory.
     # Just run Make.
     Set-Location ./build
     "--> Calling CMake ...`n"
-    cmake --build .
+
+    if ($IsLinux) {
+        cmake --build .
+    } elseif ($IsWindows) {
+        MSBuild.exe learn.vcxproj
+    }
 }
 
 # Run the built binary.
 "`n--> done building, calling the built binary ...`n"
-./learn
+if ($IsWindows) {
+    Debug/learn.exe
+} else {
+    ./learn
+}
 
 # We are done.
 # Reseting the working directory back where we started.
